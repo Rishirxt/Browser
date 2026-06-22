@@ -1,12 +1,12 @@
 #pragma once
 
 #include <QMainWindow>
-
-class QLineEdit;
-class QToolBar;
-class QAction;
-class QProgressBar;
-class QLabel;
+#include <QToolBar>
+#include <QLineEdit>
+#include <QProgressBar>
+#include <QStatusBar>
+#include <QLabel>
+#include <QWebEngineView>
 
 class MainWindow : public QMainWindow
 {
@@ -14,18 +14,23 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
+    ~MainWindow() override = default;
+
+private slots:
+    void onAddressEntered();
 
 private:
-    void setupToolBar();   // Module 2 -- done below
-    void setupMenuBar();   // Module 2 -- TODO: finish this (see comments in .cpp)
-    void setupStatusBar(); // Module 2 -- TODO: finish this (see comments in .cpp)
+    void setupToolBar();
+    void setupMenuBar();
+    void setupStatusBar();
 
-    QToolBar *m_toolBar = nullptr;
-    QAction *m_backAction = nullptr;
-    QAction *m_forwardAction = nullptr;
-    QAction *m_reloadAction = nullptr;
-    QAction *m_homeAction = nullptr;
-    QLineEdit *m_addressBar = nullptr;
-    QProgressBar *m_progressBar = nullptr;
-    QLabel *m_progressLabel = nullptr;
+    QToolBar       *m_toolBar      = nullptr;
+    QLineEdit      *m_addressBar   = nullptr;
+    QAction        *m_backAction   = nullptr;
+    QAction        *m_forwardAction= nullptr;
+    QAction        *m_reloadAction = nullptr;
+    QAction        *m_homeAction   = nullptr;
+    QProgressBar   *m_progressBar  = nullptr;
+    QLabel         *m_progressLabel= nullptr;
+    QWebEngineView *m_webView      = nullptr;
 };

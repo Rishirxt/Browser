@@ -1,5 +1,5 @@
 #include "mainwindow.h"
-
+#include <QWebEngineView>
 #include <QAction>
 #include <QLabel>
 #include <QLineEdit>
@@ -14,10 +14,18 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle(tr("Qt Browser"));
-
     setupToolBar();
     setupMenuBar();
     setupStatusBar();
+
+    // Module 3 — WebEngine view
+    m_webView = new QWebEngineView(this);
+    setCentralWidget(m_webView);
+    m_webView->setUrl(QUrl("https://www.google.com"));
+
+    // Wire address bar
+    connect(m_addressBar, &QLineEdit::returnPressed,
+            this, &MainWindow::onAddressEntered);
 }
 
 void MainWindow::setupToolBar()
@@ -97,4 +105,9 @@ void MainWindow::setupStatusBar()
     m_progressLabel = new QLabel(tr("50%"), this);
     m_progressLabel->setFixedWidth(32);
     statusBar()->addPermanentWidget(m_progressLabel);
+}
+void MainWindow::onAddressEntered()
+{
+    QUrl url = QUrl::fromUserInput(m_addressBar->text());
+    m_webView->setUrl(url);
 }
