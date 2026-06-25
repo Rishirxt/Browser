@@ -21,6 +21,10 @@ public:
 
 public slots:
     void addNewTab(const QUrl &url = QUrl("https://www.google.com"));
+    void addNewIncognitoTab(const QUrl &url=QUrl("https://www.google.com"));
+    void createTab(QWebEngineProfile *profile,
+                   const QUrl &url,
+                   const QString &prefix = "");
 
 private slots:
     void onAddressEntered();

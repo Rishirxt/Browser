@@ -17,6 +17,9 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPushButton>
+#include <QMessageBox>
+#include <QWebEnginePermission>
+#include <QWebEngineCertificateError>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -81,31 +84,91 @@ MainWindow::MainWindow(QWidget *parent)
     addNewTab(QUrl("https://www.google.com"));
 }
 
-void MainWindow::addNewTab(const QUrl &url)
-{
+void MainWindow::createTab(QWebEngineProfile *profile,
+                           const QUrl &url,
+                           const QString &prefix){
     QWebEngineView *webView = new QWebEngineView(this);
 
-    // Use our custom page instead of the default one
-    CustomBrowserPage *page = new CustomBrowserPage(QWebEngineProfile::defaultProfile(), webView);
+    CustomBrowserPage *page =
+        new CustomBrowserPage(profile, webView);
+
+    connect(
+        page,
+        &QWebEnginePage::certificateError,
+        this,
+        [this](QWebEngineCertificateError error)
+        {
+            auto reply = QMessageBox::warning(
+                this,
+                "HTTPS Certificate Warning",
+                QString(
+                    "The certificate for\n\n%1\n\nis invalid.\n\nContinue anyway?"
+                    ).arg(error.url().toString()),
+                QMessageBox::Yes | QMessageBox::No
+                );
+
+            if (reply == QMessageBox::Yes)
+                error.acceptCertificate();
+            else
+                error.rejectCertificate();
+        }
+        );
+
+    connect(
+        page,
+        &QWebEnginePage::permissionRequested,
+        this,
+        [this](QWebEnginePermission permission)
+        {
+            QString permissionName;
+
+            switch (permission.permissionType())
+            {
+            case QWebEnginePermission::PermissionType::Geolocation:
+                permissionName = "Location";
+                break;
+
+            case QWebEnginePermission::PermissionType::MediaAudioCapture:
+                permissionName = "Microphone";
+                break;
+
+            case QWebEnginePermission::PermissionType::MediaVideoCapture:
+                permissionName = "Camera";
+                break;
+
+            case QWebEnginePermission::PermissionType::Notifications:
+                permissionName = "Notifications";
+                break;
+
+            default:
+                permissionName = "Permission";
+                break;
+            }
+
+            auto reply = QMessageBox::question(
+                this,
+                "Permission Request",
+                QString("%1 wants access to your %2.\nAllow?")
+                    .arg(permission.origin().host())
+                    .arg(permissionName)
+                );
+
+            if (reply == QMessageBox::Yes)
+                permission.grant();
+            else
+                permission.deny();
+        }
+        );
     webView->setPage(page);
 
-    // When a popup is blocked, show a message in the status bar
-    connect(page, &CustomBrowserPage::popupBlocked,
-            this, [this](const QUrl &url) {
-                statusBar()->showMessage(tr("Popup blocked: %1").arg(url.toString()), 5000);
-            });
-
-    webView->setUrl(url);
-
-    int index = m_tabWidget->addTab(webView, tr("New Tab"));
+    int index = m_tabWidget->addTab(webView, prefix +tr("New Tab"));
     m_tabWidget->setCurrentIndex(index);
-
     // Update tab title when page title changes
     connect(webView, &QWebEngineView::titleChanged,
-            this, [this, webView](const QString &title) {
+            this, [this, webView,prefix](const QString &title) {
                 int i = m_tabWidget->indexOf(webView);
                 if (i >= 0)
-                    m_tabWidget->setTabText(i, title.isEmpty() ? tr("New Tab") : title);
+                    m_tabWidget->setTabText(i, prefix + (title.isEmpty() ? tr("New Tab") : title));
                 if (m_tabWidget->currentWidget() == webView)
                     setWindowTitle(title);
             });
@@ -121,10 +184,10 @@ void MainWindow::addNewTab(const QUrl &url)
     connect(webView,&QWebEngineView::iconChanged,this,
             [this,webView](const QIcon &icon){
                 int i=m_tabWidget->indexOf(webView);
-                    if(i>=0){
-                        m_tabWidget->setTabIcon(i, icon);
-                    }
+                if(i>=0){
+                    m_tabWidget->setTabIcon(i, icon);
                 }
+            }
             );
 
     // Update progress bar
@@ -151,6 +214,24 @@ void MainWindow::addNewTab(const QUrl &url)
 
     connect(page, &CustomBrowserPage::popupBlocked,
             this, &MainWindow::onPopupBlocked);
+
+    webView->setUrl(url);
+}
+
+void MainWindow::addNewTab(const QUrl &url)
+{
+    createTab(
+        QWebEngineProfile::defaultProfile(),
+        url
+        );
+}
+
+void MainWindow::addNewIncognitoTab(const QUrl &url){
+    createTab(
+        new QWebEngineProfile(this),
+        url,
+        "🕶 "
+        );
 }
 
 void MainWindow::onTabCloseRequested(int index)
@@ -219,6 +300,12 @@ void MainWindow::setupMenuBar()
     newTabAction->setShortcut(QKeySequence::AddTab);
     connect(newTabAction, &QAction::triggered,
             this, [this]() { addNewTab(); });
+
+    QAction *incognitoAction=fileMenu->addAction("New Incognito Tab");
+    incognitoAction->setShortcut(QKeySequence("Ctrl+Shift+N"));
+    connect(incognitoAction,&QAction::triggered,this,[this](){
+        addNewIncognitoTab();
+    });
 
     QAction *closeTabAction = fileMenu->addAction(tr("Close Tab"));
     closeTabAction->setShortcut(QKeySequence("Ctrl+W"));
