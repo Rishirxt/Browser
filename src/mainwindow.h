@@ -24,12 +24,14 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(bool incognitoWindow = false, QWidget *parent = nullptr);
     ~MainWindow() override = default;
 
 public slots:
     void addNewTab(const QUrl &url = QUrl("qrc:///resources/newtab.html"));
     void addNewIncognitoTab(const QUrl &url = QUrl("qrc:///resources/newtab_incognito.html"));
+    void addNewWindow();
+    void addNewIncognitoWindow();
 
 private slots:
     void onAddressEntered();

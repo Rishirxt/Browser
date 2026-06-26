@@ -56,7 +56,7 @@ static const char *kFontFamily  = "Segoe UI, Roboto, Arial, sans-serif";
 // ─────────────────────────────────────────────────────────────────────────────
 //  Constructor
 // ─────────────────────────────────────────────────────────────────────────────
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(bool incognitoWindow,QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle(tr("Qt Browser"));
@@ -148,7 +148,16 @@ MainWindow::MainWindow(QWidget *parent)
             });
 
     // First tab
-    addNewTab();
+    if (incognitoWindow)
+    {
+        addNewIncognitoTab(
+            QUrl("qrc:///resources/newtab_incognito.html")
+            );
+    }
+    else
+    {
+        addNewTab();
+    }
 
     QNetworkInformation::loadDefaultBackend();
 
@@ -414,8 +423,14 @@ void MainWindow::buildHamburgerMenu(QMenu *menu)
     QAction *newTab = menu->addAction(tr("New tab                Ctrl+T"));
     connect(newTab, &QAction::triggered, this, [this]() { addNewTab(); });
 
-    QAction *incognito = menu->addAction(tr("New incognito tab   Ctrl+Shift+N"));
+    QAction *newWindow=menu->addAction(tr("New Window            Ctrl+N"));
+    connect(newWindow,&QAction::triggered,this,[this](){addNewWindow();});
+
+    QAction *incognito = menu->addAction(tr("New incognito tab   Ctrl+I"));
     connect(incognito, &QAction::triggered, this, [this]() { addNewIncognitoTab(); });
+
+    QAction *newIncognitoWindow= menu->addAction(tr("New Incognito window Ctrl+Shift+N"));
+    connect(newIncognitoWindow,&QAction::triggered,this,[this](){addNewIncognitoWindow();});
 
     QAction *closeTab = menu->addAction(tr("Close tab              Ctrl+W"));
     connect(closeTab, &QAction::triggered, this, [this]() {
@@ -641,6 +656,24 @@ void MainWindow::addNewTab(const QUrl &url)
 void MainWindow::addNewIncognitoTab(const QUrl &url)
 {
     createTab(new QWebEngineProfile(this), url, QString::fromUtf8("🕶 "));
+}
+
+void MainWindow::addNewWindow()
+{
+    MainWindow *window= new MainWindow(false);
+
+    window->setGeometry(this->geometry());
+
+    window->show();
+}
+
+void MainWindow::addNewIncognitoWindow()
+{
+    MainWindow *window = new MainWindow(true);
+
+    window->setGeometry(this->geometry());
+
+    window->show();
 }
 
 void MainWindow::onTabCloseRequested(int index)
