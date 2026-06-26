@@ -124,7 +124,8 @@ MainWindow::MainWindow(bool incognitoWindow,QWidget *parent)
     auto *scIncog  = new QShortcut(QKeySequence("Ctrl+Shift+N"), this);
     auto *scQuit   = new QShortcut(QKeySequence("Ctrl+Q"),       this);
     auto *scReload = new QShortcut(QKeySequence("F5"),           this);
-
+    auto *scNewWindow = new QShortcut(QKeySequence("Ctrl+N"),    this);
+    auto *scNewIncognitoWindow = new QShortcut(QKeySequence("Ctrl+I"),this);
     connect(scNewTab, &QShortcut::activated, this, [this]() { addNewTab(); });
     connect(scClose,  &QShortcut::activated, this, [this]() {
         onTabCloseRequested(m_tabBar->currentIndex());
@@ -134,7 +135,20 @@ MainWindow::MainWindow(bool incognitoWindow,QWidget *parent)
     connect(scReload, &QShortcut::activated, this, [this]() {
         if (auto *v = currentWebView()) v->reload();
     });
-
+    connect(scNewWindow,
+            &QShortcut::activated,
+            this,
+            [this]()
+            {
+                addNewWindow();
+            });
+    connect(scNewIncognitoWindow,
+            &QShortcut::activated,
+            this,
+            [this]()
+            {
+                addNewIncognitoWindow();
+            });
     // Address bar
     connect(m_addressBar, &QLineEdit::returnPressed,
             this, &MainWindow::onAddressEntered);
