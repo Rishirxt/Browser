@@ -1,11 +1,13 @@
 #include "mainwindow.h"
 #include "custombrowserpage.h"
+#include "apitesterwidget.h"
+#include "historymanager.h"
+#include "bookmarkmanager.h"
 
 #include <QWebEngineView>
 #include <QWebEngineProfile>
 #include <QWebEnginePermission>
 #include <QWebEngineCertificateError>
-
 #include <QAction>
 #include <QApplication>
 #include <QHBoxLayout>
@@ -26,6 +28,11 @@
 #include <QPushButton>
 #include <QSizePolicy>
 #include <QFont>
+#include <QNetworkInformation>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Chrome dark-mode palette (exact values from chrome://settings)
@@ -85,6 +92,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(central);
 
+    m_historyManager= new HistoryManager(this);
+    m_historyManager->initialize();
+
+    m_bookMarkManager = new BookMarkManager(this);
+    m_bookMarkManager->initialize();
+
     // Status bar
     setupStatusBar();
 
@@ -119,6 +132,38 @@ MainWindow::MainWindow(QWidget *parent)
 
     // First tab
     addNewTab(QUrl("https://www.google.com"));
+
+    QNetworkInformation::loadDefaultBackend();
+
+    QNetworkInformation *networkInfo =
+        QNetworkInformation::instance();
+
+    if (!networkInfo)
+    {
+        m_networkStatusLabel->setText("Network: Unknown");
+    }
+    else
+    {
+        auto updateStatus = [this, networkInfo]()
+        {
+            if (networkInfo->reachability() ==
+                QNetworkInformation::Reachability::Online)
+            {
+                m_networkStatusLabel->setText("🟢 Online");
+            }
+            else
+            {
+                m_networkStatusLabel->setText("🔴 Offline");
+            }
+        };
+
+        connect(networkInfo,
+                &QNetworkInformation::reachabilityChanged,
+                this,
+                updateStatus);
+
+        updateStatus();
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,6 +194,13 @@ void MainWindow::setupTabStrip(QWidget *strip)
     m_tabBar->setElideMode(Qt::ElideRight);
     m_tabBar->setDocumentMode(true);
 
+    connect(
+        m_tabBar,
+        &QTabBar::tabCloseRequested,
+        this,
+        &MainWindow::onTabCloseRequested
+        );
+
     // Chrome-style tabs: rounded top, active tab = toolbar colour
     m_tabBar->setStyleSheet(
         QString(
@@ -175,17 +227,9 @@ void MainWindow::setupTabStrip(QWidget *strip)
             "QTabBar::tab:!selected:hover {"
             "  background: %6;"            // surface = hover
             "}"
-
-            "QTabBar::close-button {"
-            "  image: none;"
-            "  border: none;"
-            "  padding: 0px;"
-            "}"
         ).arg(kFrame, kTextDim, kFontFamily, kToolbar, kText, kSurface)
     );
 
-    connect(m_tabBar, &QTabBar::tabCloseRequested,
-            this, &MainWindow::onTabCloseRequested);
     connect(m_tabBar, &QTabBar::currentChanged,
             this, &MainWindow::onCurrentTabChanged);
 
@@ -380,6 +424,16 @@ void MainWindow::buildHamburgerMenu(QMenu *menu)
     });
 
     menu->addSeparator();
+    QAction *apiTester = menu->addAction(tr("REST API Tester"));
+
+    connect(
+        apiTester,
+        &QAction::triggered,
+        this,
+        &MainWindow::addApiTesterTab
+        );
+
+    menu->addSeparator();
 
     QAction *quit = menu->addAction(tr("Quit                       Ctrl+Q"));
     connect(quit, &QAction::triggered, this, &QWidget::close);
@@ -426,6 +480,10 @@ void MainWindow::setupStatusBar()
         QString("color: %1; font-size: 11px;").arg(kTextDim)
     );
     statusBar()->addPermanentWidget(m_progressLabel);
+
+    m_networkStatusLabel = new QLabel("Checking...", this);
+    statusBar()->addPermanentWidget(m_networkStatusLabel);
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -526,9 +584,12 @@ void MainWindow::createTab(QWebEngineProfile *profile,
                     statusBar()->showMessage(tr("Loading…"));
             });
     connect(webView, &QWebEngineView::loadFinished,
-            this, [this, webView](bool) {
+            this, [this, webView](bool ok) {
                 if (m_webStack->currentWidget() == webView)
                     statusBar()->showMessage(tr("Ready"));
+                if(ok){
+                    m_historyManager->addHistory(webView->url(),webView->title());
+                }
             });
 
     webView->setUrl(url);
@@ -546,12 +607,16 @@ void MainWindow::addNewIncognitoTab(const QUrl &url)
 
 void MainWindow::onTabCloseRequested(int index)
 {
-    if (m_tabBar->count() <= 1) return;
+    if (m_tabBar->count() <= 1)
+        return;
 
-    QWidget *w = m_webStack->widget(index);
-    m_webStack->removeWidget(w);
+    QWidget *page = m_webStack->widget(index);
+
+    m_webStack->removeWidget(page);
     m_tabBar->removeTab(index);
-    delete w;
+
+    delete page;
+
 }
 
 void MainWindow::onCurrentTabChanged(int index)
@@ -560,7 +625,11 @@ void MainWindow::onCurrentTabChanged(int index)
     m_webStack->setCurrentIndex(index);
 
     QWebEngineView *view = currentWebView();
-    if (!view) return;
+    if (!view){
+        m_addressBar->clear();
+        setWindowTitle("REST API Tester");
+        return;
+    }
 
     m_addressBar->setText(view->url().toString());
     setWindowTitle(view->title().isEmpty() ? tr("Qt Browser") : view->title());
@@ -637,4 +706,15 @@ void MainWindow::onPopupBlocked(const QUrl &url)
     m_notificationBar->setGeometry(0, navBottom, width(), 36);
     m_notificationBar->show();
     m_notificationBar->raise();
+}
+
+void MainWindow::addApiTesterTab()
+{
+    ApiTesterWidget *tester = new ApiTesterWidget(this);
+
+    m_webStack->addWidget(tester);
+
+    int tabIndex = m_tabBar->addTab("REST API");
+
+    m_tabBar->setCurrentIndex(tabIndex);   // onCurrentTabChanged() updates m_webStack
 }
