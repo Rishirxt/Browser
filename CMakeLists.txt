@@ -26,13 +26,17 @@ qt_add_executable(QtBrowser
     src/custombrowserpage.cpp
     src/downloadmanager.h
     src/downloadmanager.cpp
-    resources.qrc
     src/apitesterwidget.h
     src/apitesterwidget.cpp
     src/historymanager.h
     src/historymanager.cpp
     src/bookmarkmanager.h
     src/bookmarkmanager.cpp
+    src/historydialog.h
+    src/historydialog.cpp
+    src/bookmarkdialog.h
+    src/bookmarkdialog.cpp
+    resources.qrc
 )
 
 target_link_libraries(QtBrowser PRIVATE

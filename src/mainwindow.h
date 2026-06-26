@@ -16,8 +16,9 @@
 #include "downloadmanager.h"
 #include "historymanager.h"
 #include "bookmarkmanager.h"
-
-
+#include "historydialog.h"
+#include "bookmarkdialog.h"
+#include <QCompleter>
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -27,8 +28,8 @@ public:
     ~MainWindow() override = default;
 
 public slots:
-    void addNewTab(const QUrl &url = QUrl("https://www.google.com"));
-    void addNewIncognitoTab(const QUrl &url = QUrl("https://www.google.com"));
+    void addNewTab(const QUrl &url = QUrl("qrc:///resources/newtab.html"));
+    void addNewIncognitoTab(const QUrl &url = QUrl("qrc:///resources/newtab_incognito.html"));
 
 private slots:
     void onAddressEntered();
@@ -67,8 +68,9 @@ private:
     QWidget         *m_notificationBar  = nullptr;
 
     DownloadManager *m_downloadManager  = nullptr;
-    HistoryManager  *m_historyManager   = nullptr;
+    HistoryManager *m_historyManager = nullptr;
     BookMarkManager *m_bookMarkManager  = nullptr;
+    QCompleter *m_completer = nullptr;
 
     QLabel *m_networkStatusLabel = nullptr;
 };
