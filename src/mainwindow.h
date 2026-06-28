@@ -19,6 +19,8 @@
 #include "historydialog.h"
 #include "bookmarkdialog.h"
 #include <QCompleter>
+#include <QTimer>
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -49,6 +51,7 @@ private:
     void setupStatusBar();
     void buildHamburgerMenu(QMenu *menu);
     void addApiTesterTab();
+    void toggleTheme();
 
     // Tab strip
     QTabBar         *m_tabBar           = nullptr;
@@ -75,4 +78,10 @@ private:
     QCompleter *m_completer = nullptr;
 
     QLabel *m_networkStatusLabel = nullptr;
+
+    QTimer *m_suspendTimer = nullptr;
+
+private:
+    bool m_darkTheme = true;
+
 };
