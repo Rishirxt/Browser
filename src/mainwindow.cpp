@@ -64,8 +64,9 @@ MainWindow::MainWindow(bool incognitoWindow,QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle(tr("Qt Browser"));
+    setWindowIcon(QIcon(":/icon.ico"));
     menuBar()->hide();
-
+    statusBar()->hide();
     // Global font
     QFont appFont(kFontFamily, 10);
     appFont.setWeight(QFont::Normal);
