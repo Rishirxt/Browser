@@ -12,6 +12,7 @@
 #include <QToolButton>
 #include <QWebEngineProfile>
 #include <QAction>
+#include <QTimer>
 #include <QMenu>
 #include "downloadmanager.h"
 #include "historymanager.h"
@@ -19,23 +20,27 @@
 #include "historydialog.h"
 #include "bookmarkdialog.h"
 #include <QCompleter>
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(bool incognitoWindow = false, QWidget *parent = nullptr);
     ~MainWindow() override = default;
 
 public slots:
     void addNewTab(const QUrl &url = QUrl("qrc:///resources/newtab.html"));
     void addNewIncognitoTab(const QUrl &url = QUrl("qrc:///resources/newtab_incognito.html"));
+    void addNewWindow();
+    void addNewIncognitoWindow();
 
 private slots:
     void onAddressEntered();
     void onTabCloseRequested(int index);
     void onCurrentTabChanged(int index);
     void onPopupBlocked(const QUrl &url);
+    void toggleTheme();
 
 private:
     void createTab(QWebEngineProfile *profile,
@@ -68,9 +73,11 @@ private:
     QWidget         *m_notificationBar  = nullptr;
 
     DownloadManager *m_downloadManager  = nullptr;
-    HistoryManager *m_historyManager = nullptr;
+    HistoryManager  *m_historyManager   = nullptr;
     BookMarkManager *m_bookMarkManager  = nullptr;
-    QCompleter *m_completer = nullptr;
+    QCompleter      *m_completer        = nullptr;
 
-    QLabel *m_networkStatusLabel = nullptr;
+    QLabel  *m_networkStatusLabel = nullptr;
+    QTimer  *m_suspendTimer       = nullptr;
+    bool     m_darkTheme          = true;
 };

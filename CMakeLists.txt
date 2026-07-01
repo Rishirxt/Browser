@@ -46,3 +46,8 @@ target_link_libraries(QtBrowser PRIVATE
     Qt6::WebEngineWidgets
     Qt6::Sql
 )
+
+set_target_properties(QtBrowser PROPERTIES
+    WIN32_EXECUTABLE TRUE
+    MACOSX_BUNDLE TRUE
+)
